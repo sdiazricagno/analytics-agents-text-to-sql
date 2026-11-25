@@ -1,0 +1,205 @@
+# Governed semantic layer for the synthetic retail warehouse.
+tables:
+  regions:
+    description: Sales regions; each region belongs to a country.
+    synonyms: [region, area, territory, country]
+    columns:
+      region_id: Region primary key
+      region_name: "Region name: North, South, East, West, Central, Coastal"
+      country: "Country of the region: Northland, Eastmark, Midvale"
+  stores:
+    description: Physical and virtual store locations.
+    synonyms: [store, shop, location, branch]
+    columns:
+      store_id: Store primary key
+      store_name: Store display name such as 'Store 07'
+      region_id: Region where the store operates
+      store_type: "Store format: Flagship, Mall, Outlet, Express"
+      opened_date: Date the store opened
+  customers:
+    description: Registered customers.
+    synonyms: [customer, client, buyer, shopper, member, loyalty, signed up]
+    columns:
+      customer_id: Customer primary key
+      first_name: Customer first name
+      last_name: Customer last name
+      segment: "Customer segment: Consumer, Small Business, Corporate"
+      region_id: Home region of the customer
+      signup_date: Date the customer registered
+      loyalty_member: True when the customer is in the loyalty programme
+  suppliers:
+    description: Vendors that supply products.
+    synonyms: [supplier, vendor, manufacturer]
+    columns:
+      supplier_id: Supplier primary key
+      supplier_name: Supplier name such as 'Supplier C'
+      country: Supplier home country
+  categories:
+    description: Product categories grouped into departments.
+    synonyms: [category, department]
+    columns:
+      category_id: Category primary key
+      category_name: "Category: Phones, Laptops, Audio, Kitchen, Furniture, Garden, Menswear, Womenswear, Footwear, Snacks, Beverages, Pantry"
+      department: "Department: Electronics, Home, Apparel, Grocery"
+  products:
+    description: Product catalogue with list price and unit cost.
+    synonyms: [product, item, sku, price, cost]
+    columns:
+      product_id: Product primary key
+      product_name: Product name
+      category_id: Product category
+      supplier_id: Product supplier
+      list_price: Catalogue list price
+      unit_cost: Cost to the retailer per unit
+  orders:
+    description: Order headers; one row per order.
+    synonyms: [order, purchase, transaction, channel, status, sales]
+    columns:
+      order_id: Order primary key
+      customer_id: Customer who placed the order
+      store_id: Store that fulfilled the order
+      order_date: Date the order was placed
+      channel: "Sales channel: Online, In-Store, Mobile App"
+      status: "Order status: Completed, Cancelled, Pending"
+  order_items:
+    description: Order lines; revenue for a line is quantity * unit_price * (1 - discount).
+    synonyms: [line, revenue, sales, units, quantity, discount, sold]
+    columns:
+      order_item_id: Order line primary key
+      order_id: Parent order
+      product_id: Product sold
+      quantity: Units sold on the line
+      unit_price: Price charged per unit before discount
+      discount: Fractional discount, e.g. 0.10 for 10 percent
+  payments:
+    description: Payments received for non-cancelled orders.
+    synonyms: [payment, paid, method, card, wallet]
+    columns:
+      payment_id: Payment primary key
+      order_id: Order being paid
+      payment_method: "Payment method: Credit Card, Debit Card, Gift Card, Wallet"
+      amount: Amount paid
+      paid_date: Date of payment
+  returns:
+    description: Returned order lines with refund amount.
+    synonyms: [return, refund, returned]
+    columns:
+      return_id: Return primary key
+      order_item_id: Order line being returned
+      return_date: Date of return
+      reason: "Return reason: Damaged, Wrong Size, Not as Described, Changed Mind"
+      refund_amount: Amount refunded
+
+relationships:
+  - [stores.region_id, regions.region_id]
+  - [customers.region_id, regions.region_id]
+  - [products.category_id, categories.category_id]
+  - [products.supplier_id, suppliers.supplier_id]
+  - [orders.customer_id, customers.customer_id]
+  - [orders.store_id, stores.store_id]
+  - [order_items.order_id, orders.order_id]
+  - [order_items.product_id, products.product_id]
+  - [payments.order_id, orders.order_id]
+  - [returns.order_item_id, order_items.order_item_id]
+
+metrics:
+  revenue:
+    synonyms: [revenue, sales, net sales, turnover]
+    base: order_items
+    expr: SUM(order_items.quantity * order_items.unit_price * (1 - order_items.discount))
+    filters: [orders.status <> 'Cancelled']
+  order_count:
+    synonyms: [number of orders, order count, orders, how many orders]
+    base: orders
+    expr: COUNT(DISTINCT orders.order_id)
+  units_sold:
+    synonyms: [units sold, units, quantity sold, items sold]
+    base: order_items
+    expr: SUM(order_items.quantity)
+    filters: [orders.status <> 'Cancelled']
+  average_order_value:
+    synonyms: [average order value, aov, average basket]
+    base: order_items
+    expr: SUM(order_items.quantity * order_items.unit_price * (1 - order_items.discount)) / COUNT(DISTINCT orders.order_id)
+    filters: [orders.status <> 'Cancelled']
+  gross_margin:
+    synonyms: [gross margin, gross profit, margin, profit]
+    base: order_items
+    expr: SUM(order_items.quantity * (order_items.unit_price * (1 - order_items.discount) - products.unit_cost))
+    filters: [orders.status <> 'Cancelled']
+    requires: [products]
+  active_customers:
+    synonyms: [active customers, buying customers, customers who ordered, number of active customers]
+    base: orders
+    expr: COUNT(DISTINCT orders.customer_id)
+  refund_amount:
+    synonyms: [refund amount, refunds, total refunds, refunded]
+    base: returns
+    expr: SUM(returns.refund_amount)
+  return_count:
+    synonyms: [number of returns, return count, returns, how many returns]
+    base: returns
+    expr: COUNT(*)
+  amount_paid:
+    synonyms: [amount paid, payments, total payments, collected]
+    base: payments
+    expr: SUM(payments.amount)
+
+dimensions:
+  region:
+    synonyms: [region, store region]
+    column: regions.region_name
+    via: [stores]
+  customer_region:
+    synonyms: [customer region, home region]
+    column: regions.region_name
+    via: [customers]
+  country:
+    synonyms: [country, store country]
+    column: regions.country
+    via: [stores]
+  store:
+    synonyms: [store, shop]
+    column: stores.store_name
+  store_type:
+    synonyms: [store type, store format]
+    column: stores.store_type
+  channel:
+    synonyms: [channel, sales channel]
+    column: orders.channel
+  status:
+    synonyms: [status, order status]
+    column: orders.status
+  segment:
+    synonyms: [segment, customer segment]
+    column: customers.segment
+  category:
+    synonyms: [category, product category]
+    column: categories.category_name
+  department:
+    synonyms: [department]
+    column: categories.department
+  supplier:
+    synonyms: [supplier, vendor]
+    column: suppliers.supplier_name
+  product:
+    synonyms: [product]
+    column: products.product_name
+  payment_method:
+    synonyms: [payment method, method of payment]
+    column: payments.payment_method
+  return_reason:
+    synonyms: [return reason, reason]
+    column: returns.reason
+  year:
+    synonyms: [year, yearly, annual, per year]
+    column: orders.order_date
+    grain: year
+  quarter:
+    synonyms: [quarter, quarterly]
+    column: orders.order_date
+    grain: quarter
+  month:
+    synonyms: [month, monthly, per month]
+    column: orders.order_date
+    grain: month

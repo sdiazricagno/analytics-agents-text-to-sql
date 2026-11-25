@@ -1,0 +1,443 @@
+# Golden benchmark: natural-language questions with hand-written gold SQL.
+# Difficulty is derived from the gold SQL (tables joined, nesting) by the harness.
+- id: q01
+  question: How many customers are there?
+  sql: SELECT COUNT(*) FROM customers
+- id: q02
+  question: How many orders were placed in 2024?
+  sql: SELECT COUNT(*) FROM orders WHERE EXTRACT(year FROM order_date) = 2024
+- id: q03
+  question: How many orders per channel?
+  sql: SELECT channel, COUNT(*) FROM orders GROUP BY channel
+- id: q04
+  question: What is the average list price of all products?
+  sql: SELECT AVG(list_price) FROM products
+- id: q05
+  question: How many customers are loyalty members?
+  sql: SELECT COUNT(*) FROM customers WHERE loyalty_member
+- id: q06
+  question: Number of returns by return reason
+  sql: SELECT reason, COUNT(*) FROM returns GROUP BY reason
+- id: q07
+  question: What is the total refund amount across all returns?
+  sql: SELECT SUM(refund_amount) FROM returns
+- id: q08
+  question: How many orders were cancelled?
+  sql: SELECT COUNT(*) FROM orders WHERE status = 'Cancelled'
+- id: q09
+  question: Total amount paid by payment method
+  sql: SELECT payment_method, SUM(amount) FROM payments GROUP BY payment_method
+- id: q10
+  question: Which store opened most recently?
+  sql: SELECT store_name FROM stores ORDER BY opened_date DESC LIMIT 1
+- id: q11
+  question: How many customers are in each segment?
+  sql: SELECT segment, COUNT(*) FROM customers GROUP BY segment
+- id: q12
+  question: What is the most expensive product by list price?
+  sql: SELECT product_name FROM products ORDER BY list_price DESC LIMIT 1
+- id: q13
+  question: How many suppliers are based in each country?
+  sql: SELECT country, COUNT(*) FROM suppliers GROUP BY country
+- id: q14
+  question: What is the average discount on order lines?
+  sql: SELECT AVG(discount) FROM order_items
+- id: q15
+  question: How many order lines have a quantity of 5?
+  sql: SELECT COUNT(*) FROM order_items WHERE quantity = 5
+- id: q16
+  question: How many customers signed up in 2023?
+  sql: SELECT COUNT(*) FROM customers WHERE EXTRACT(year FROM signup_date) = 2023
+- id: q17
+  question: How many orders per month in 2025?
+  sql: |
+    SELECT DATE_TRUNC('month', order_date) AS month, COUNT(*) FROM orders
+    WHERE EXTRACT(year FROM order_date) = 2025 GROUP BY 1
+- id: q18
+  question: List the names of Flagship stores.
+  sql: SELECT store_name FROM stores WHERE store_type = 'Flagship'
+- id: q19
+  question: Which payment method collected the most money in 2024, by payment date?
+  sql: |
+    SELECT payment_method FROM payments WHERE EXTRACT(year FROM paid_date) = 2024
+    GROUP BY payment_method ORDER BY SUM(amount) DESC LIMIT 1
+- id: q20
+  question: What is the average refund amount for each return reason?
+  sql: SELECT reason, AVG(refund_amount) FROM returns GROUP BY reason
+- id: q21
+  question: For each channel, what fraction of orders were cancelled?
+  sql: |
+    SELECT channel, AVG(CASE WHEN status = 'Cancelled' THEN 1.0 ELSE 0.0 END) FROM orders GROUP BY channel
+- id: q22
+  question: Revenue by channel
+  sql: |
+    SELECT o.channel, SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.status <> 'Cancelled' GROUP BY o.channel
+- id: q23
+  question: What was total revenue in 2024?
+  sql: |
+    SELECT SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2024
+- id: q24
+  question: How many stores are in each region?
+  sql: |
+    SELECT r.region_name, COUNT(*) FROM stores s JOIN regions r ON s.region_id = r.region_id GROUP BY r.region_name
+- id: q25
+  question: Number of products in each department
+  sql: |
+    SELECT c.department, COUNT(*) FROM products p JOIN categories c ON p.category_id = c.category_id
+    GROUP BY c.department
+- id: q26
+  question: How many products does each supplier provide?
+  sql: |
+    SELECT s.supplier_name, COUNT(*) FROM products p JOIN suppliers s ON p.supplier_id = s.supplier_id
+    GROUP BY s.supplier_name
+- id: q27
+  question: Units sold by channel in 2025
+  sql: |
+    SELECT o.channel, SUM(oi.quantity) FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2025 GROUP BY o.channel
+- id: q28
+  question: How many distinct customers ordered through the Online channel in each customer segment?
+  sql: |
+    SELECT c.segment, COUNT(DISTINCT o.customer_id) FROM orders o JOIN customers c ON o.customer_id = c.customer_id
+    WHERE o.channel = 'Online' GROUP BY c.segment
+- id: q29
+  question: Total amount paid for orders placed through the Mobile App in 2023
+  sql: |
+    SELECT SUM(p.amount) FROM payments p JOIN orders o ON p.order_id = o.order_id
+    WHERE o.channel = 'Mobile App' AND EXTRACT(year FROM o.order_date) = 2023
+- id: q30
+  question: What is the average list price per product category?
+  sql: |
+    SELECT c.category_name, AVG(p.list_price) FROM products p JOIN categories c ON p.category_id = c.category_id
+    GROUP BY c.category_name
+- id: q31
+  question: Which region do most customers live in?
+  sql: |
+    SELECT r.region_name FROM customers c JOIN regions r ON c.region_id = r.region_id
+    GROUP BY r.region_name ORDER BY COUNT(*) DESC LIMIT 1
+- id: q32
+  question: How many orders were placed at Outlet stores?
+  sql: SELECT COUNT(*) FROM orders o JOIN stores s ON o.store_id = s.store_id WHERE s.store_type = 'Outlet'
+- id: q33
+  question: What is the total refund amount for returned order lines that had a discount?
+  sql: |
+    SELECT SUM(r.refund_amount) FROM returns r JOIN order_items oi ON r.order_item_id = oi.order_item_id
+    WHERE oi.discount > 0
+- id: q34
+  question: Average order value by channel
+  sql: |
+    SELECT o.channel, SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) / COUNT(DISTINCT o.order_id)
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.status <> 'Cancelled' GROUP BY o.channel
+- id: q35
+  question: How many orders did loyalty members place?
+  sql: SELECT COUNT(*) FROM orders o JOIN customers c ON o.customer_id = c.customer_id WHERE c.loyalty_member
+- id: q36
+  question: List the products in the Laptops category with a list price above 500.
+  sql: |
+    SELECT p.product_name FROM products p JOIN categories c ON p.category_id = c.category_id
+    WHERE c.category_name = 'Laptops' AND p.list_price > 500
+- id: q37
+  question: Number of orders by store type
+  sql: SELECT s.store_type, COUNT(*) FROM orders o JOIN stores s ON o.store_id = s.store_id GROUP BY s.store_type
+- id: q38
+  question: How many customers live in the North region?
+  sql: |
+    SELECT COUNT(*) FROM customers c JOIN regions r ON c.region_id = r.region_id WHERE r.region_name = 'North'
+- id: q39
+  question: Which product category has the highest average discount on its order lines?
+  sql: |
+    SELECT c.category_name FROM order_items oi
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    GROUP BY c.category_name ORDER BY AVG(oi.discount) DESC LIMIT 1
+- id: q40
+  question: Revenue by store region in 2025
+  sql: |
+    SELECT r.region_name, SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN stores s ON o.store_id = s.store_id JOIN regions r ON s.region_id = r.region_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2025 GROUP BY r.region_name
+- id: q41
+  question: Revenue by department
+  sql: |
+    SELECT c.department, SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    WHERE o.status <> 'Cancelled' GROUP BY c.department
+- id: q42
+  question: Top 5 categories by gross margin
+  sql: |
+    SELECT c.category_name, SUM(oi.quantity * (oi.unit_price * (1 - oi.discount) - p.unit_cost)) AS gm
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    WHERE o.status <> 'Cancelled' GROUP BY c.category_name ORDER BY gm DESC LIMIT 5
+- id: q43
+  question: What was gross margin per supplier in 2024?
+  sql: |
+    SELECT s.supplier_name, SUM(oi.quantity * (oi.unit_price * (1 - oi.discount) - p.unit_cost))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN suppliers s ON p.supplier_id = s.supplier_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2024 GROUP BY s.supplier_name
+- id: q44
+  question: Revenue by customer segment and channel
+  sql: |
+    SELECT c.segment, o.channel, SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN customers c ON o.customer_id = c.customer_id
+    WHERE o.status <> 'Cancelled' GROUP BY c.segment, o.channel
+- id: q45
+  question: Refund amount by department
+  sql: |
+    SELECT c.department, SUM(r.refund_amount) FROM returns r
+    JOIN order_items oi ON r.order_item_id = oi.order_item_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    GROUP BY c.department
+- id: q46
+  question: Number of returns by store type
+  sql: |
+    SELECT s.store_type, COUNT(*) FROM returns r
+    JOIN order_items oi ON r.order_item_id = oi.order_item_id
+    JOIN orders o ON oi.order_id = o.order_id JOIN stores s ON o.store_id = s.store_id
+    GROUP BY s.store_type
+- id: q47
+  question: Which supplier generated the most revenue from Online orders?
+  sql: |
+    SELECT s.supplier_name FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN suppliers s ON p.supplier_id = s.supplier_id
+    WHERE o.status <> 'Cancelled' AND o.channel = 'Online'
+    GROUP BY s.supplier_name ORDER BY SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) DESC LIMIT 1
+- id: q48
+  question: Average order value by customer region
+  sql: |
+    SELECT r.region_name, SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) / COUNT(DISTINCT o.order_id)
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN customers c ON o.customer_id = c.customer_id JOIN regions r ON c.region_id = r.region_id
+    WHERE o.status <> 'Cancelled' GROUP BY r.region_name
+- id: q49
+  question: What was revenue from loyalty members in each store region in 2024?
+  sql: |
+    SELECT r.region_name, SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN customers c ON o.customer_id = c.customer_id
+    JOIN stores s ON o.store_id = s.store_id JOIN regions r ON s.region_id = r.region_id
+    WHERE o.status <> 'Cancelled' AND c.loyalty_member AND EXTRACT(year FROM o.order_date) = 2024
+    GROUP BY r.region_name
+- id: q50
+  question: Total revenue of the Electronics department in Q4 2024
+  sql: |
+    SELECT SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    WHERE o.status <> 'Cancelled' AND c.department = 'Electronics'
+      AND EXTRACT(year FROM o.order_date) = 2024 AND EXTRACT(quarter FROM o.order_date) = 4
+- id: q51
+  question: Units sold in the Beverages category through the Mobile App channel
+  sql: |
+    SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    WHERE o.status <> 'Cancelled' AND c.category_name = 'Beverages' AND o.channel = 'Mobile App'
+- id: q52
+  question: Which store had the highest revenue in 2023?
+  sql: |
+    SELECT s.store_name FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN stores s ON o.store_id = s.store_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2023
+    GROUP BY s.store_name ORDER BY SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) DESC LIMIT 1
+- id: q53
+  question: Refund amount by store region for 2024 orders
+  sql: |
+    SELECT r.region_name, SUM(rt.refund_amount) FROM returns rt
+    JOIN order_items oi ON rt.order_item_id = oi.order_item_id
+    JOIN orders o ON oi.order_id = o.order_id JOIN stores s ON o.store_id = s.store_id
+    JOIN regions r ON s.region_id = r.region_id
+    WHERE EXTRACT(year FROM o.order_date) = 2024 GROUP BY r.region_name
+- id: q54
+  question: Total amount paid by payment method for Corporate customers
+  sql: |
+    SELECT p.payment_method, SUM(p.amount) FROM payments p JOIN orders o ON p.order_id = o.order_id
+    JOIN customers c ON o.customer_id = c.customer_id
+    WHERE c.segment = 'Corporate' GROUP BY p.payment_method
+- id: q55
+  question: Revenue by product category for Flagship stores
+  sql: |
+    SELECT c.category_name, SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN stores s ON o.store_id = s.store_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    WHERE o.status <> 'Cancelled' AND s.store_type = 'Flagship' GROUP BY c.category_name
+- id: q56
+  question: Number of In-Store orders per region in 2025
+  sql: |
+    SELECT r.region_name, COUNT(*) FROM orders o JOIN stores s ON o.store_id = s.store_id
+    JOIN regions r ON s.region_id = r.region_id
+    WHERE o.channel = 'In-Store' AND EXTRACT(year FROM o.order_date) = 2025 GROUP BY r.region_name
+- id: q57
+  question: How many order lines were sold in each department through Wallet-paid orders?
+  sql: |
+    SELECT c.department, COUNT(*) FROM order_items oi
+    JOIN payments pm ON pm.order_id = oi.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    WHERE pm.payment_method = 'Wallet' GROUP BY c.department
+- id: q58
+  question: Total quantity sold of products supplied by Supplier C, excluding cancelled orders
+  sql: |
+    SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN suppliers s ON p.supplier_id = s.supplier_id
+    WHERE o.status <> 'Cancelled' AND s.supplier_name = 'Supplier C'
+- id: q59
+  question: Which customers never placed an order? Give their customer ids.
+  sql: SELECT customer_id FROM customers WHERE customer_id NOT IN (SELECT customer_id FROM orders)
+- id: q60
+  question: How many customers placed more than 20 orders?
+  sql: |
+    SELECT COUNT(*) FROM (SELECT customer_id FROM orders GROUP BY customer_id HAVING COUNT(*) > 20) t
+- id: q61
+  question: What is the average number of orders per customer, counting only customers who ordered?
+  sql: SELECT AVG(n) FROM (SELECT customer_id, COUNT(*) AS n FROM orders GROUP BY customer_id) t
+- id: q62
+  question: Show revenue for each month of 2025 and the change versus the previous month
+  sql: |
+    WITH m AS (
+      SELECT DATE_TRUNC('month', o.order_date) AS month, SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) AS revenue
+      FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+      WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2025 GROUP BY 1
+    )
+    SELECT month, revenue, revenue - LAG(revenue) OVER (ORDER BY month) FROM m
+- id: q63
+  question: Which products have never been returned?
+  sql: |
+    SELECT product_name FROM products WHERE product_id NOT IN (
+      SELECT oi.product_id FROM returns r JOIN order_items oi ON r.order_item_id = oi.order_item_id
+    )
+- id: q64
+  question: Who were the top 3 customers by revenue in 2024? Return their customer ids.
+  sql: |
+    SELECT o.customer_id FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2024
+    GROUP BY o.customer_id ORDER BY SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) DESC LIMIT 3
+- id: q65
+  question: For each department, what fraction of order lines were returned?
+  sql: |
+    SELECT c.department, COUNT(r.return_id) * 1.0 / COUNT(*) FROM order_items oi
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    LEFT JOIN returns r ON r.order_item_id = oi.order_item_id
+    GROUP BY c.department
+- id: q66
+  question: What is the gross margin divided by revenue for each department?
+  sql: |
+    SELECT c.department,
+      SUM(oi.quantity * (oi.unit_price * (1 - oi.discount) - p.unit_cost))
+        / SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+    WHERE o.status <> 'Cancelled' GROUP BY c.department
+- id: q67
+  question: Which stores had 2024 revenue above the average store revenue for 2024?
+  sql: |
+    WITH s AS (
+      SELECT st.store_name, SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) AS revenue
+      FROM order_items oi JOIN orders o ON oi.order_id = o.order_id JOIN stores st ON o.store_id = st.store_id
+      WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2024 GROUP BY st.store_name
+    )
+    SELECT store_name FROM s WHERE revenue > (SELECT AVG(revenue) FROM s)
+- id: q68
+  question: How many customers bought products from all four departments in non-cancelled orders?
+  sql: |
+    SELECT COUNT(*) FROM (
+      SELECT o.customer_id FROM orders o JOIN order_items oi ON oi.order_id = o.order_id
+      JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+      WHERE o.status <> 'Cancelled' GROUP BY o.customer_id HAVING COUNT(DISTINCT c.department) = 4
+    ) t
+- id: q69
+  question: Rank store regions by 2025 revenue
+  sql: |
+    SELECT r.region_name,
+      RANK() OVER (ORDER BY SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) DESC)
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    JOIN stores s ON o.store_id = s.store_id JOIN regions r ON s.region_id = r.region_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2025 GROUP BY r.region_name
+- id: q70
+  question: What is the cumulative revenue by month in 2024?
+  sql: |
+    WITH m AS (
+      SELECT DATE_TRUNC('month', o.order_date) AS month, SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) AS revenue
+      FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+      WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2024 GROUP BY 1
+    )
+    SELECT month, SUM(revenue) OVER (ORDER BY month) FROM m
+- id: q71
+  question: How many customers who signed up in 2024 have not placed any order?
+  sql: |
+    SELECT COUNT(*) FROM customers
+    WHERE EXTRACT(year FROM signup_date) = 2024 AND customer_id NOT IN (SELECT customer_id FROM orders)
+- id: q72
+  question: What fraction of 2024 revenue came from the Online channel?
+  sql: |
+    SELECT SUM(CASE WHEN o.channel = 'Online' THEN oi.quantity * oi.unit_price * (1 - oi.discount) ELSE 0 END)
+      / SUM(oi.quantity * oi.unit_price * (1 - oi.discount))
+    FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2024
+- id: q73
+  question: How many customers placed orders in both 2023 and 2025?
+  sql: |
+    SELECT COUNT(*) FROM (
+      SELECT customer_id FROM orders WHERE EXTRACT(year FROM order_date) = 2023
+      INTERSECT
+      SELECT customer_id FROM orders WHERE EXTRACT(year FROM order_date) = 2025
+    ) t
+- id: q74
+  question: Which suppliers had more than 250 returned order lines?
+  sql: |
+    SELECT s.supplier_name FROM returns r
+    JOIN order_items oi ON r.order_item_id = oi.order_item_id
+    JOIN products p ON oi.product_id = p.product_id JOIN suppliers s ON p.supplier_id = s.supplier_id
+    GROUP BY s.supplier_name HAVING COUNT(*) > 250
+- id: q75
+  question: For each customer segment, what is the average total revenue per customer?
+  sql: |
+    WITH c AS (
+      SELECT cu.segment, o.customer_id, SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) AS revenue
+      FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+      JOIN customers cu ON o.customer_id = cu.customer_id
+      WHERE o.status <> 'Cancelled' GROUP BY cu.segment, o.customer_id
+    )
+    SELECT segment, AVG(revenue) FROM c GROUP BY segment
+- id: q76
+  question: Which product had the most units sold in each department?
+  sql: |
+    WITH u AS (
+      SELECT c.department, p.product_name, SUM(oi.quantity) AS units,
+        ROW_NUMBER() OVER (PARTITION BY c.department ORDER BY SUM(oi.quantity) DESC) AS rn
+      FROM order_items oi JOIN orders o ON oi.order_id = o.order_id
+      JOIN products p ON oi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
+      WHERE o.status <> 'Cancelled' GROUP BY c.department, p.product_name
+    )
+    SELECT department, product_name FROM u WHERE rn = 1
+- id: q77
+  question: What is the average salary of store employees?
+  answerable: false
+- id: q78
+  question: How much did we spend on marketing in 2024?
+  answerable: false
+- id: q79
+  question: Which customers live in the city of Springfield?
+  answerable: false
+- id: q80
+  question: How many website visits did we have last month?
+  answerable: false
+- id: q81
+  question: What is the current inventory on hand for each product?
+  answerable: false
+- id: q82
+  question: Delete all cancelled orders.
+  answerable: false
+- id: q83
+  question: What is each customer's email address?
+  answerable: false
+- id: q84
+  question: What were our competitors' sales by region?
+  answerable: false

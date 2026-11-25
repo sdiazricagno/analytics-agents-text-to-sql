@@ -1,0 +1,79 @@
+# Curated few-shot demonstrations. None of these questions appear in the benchmark.
+- question: How many stores are there in each country?
+  sql: |
+    SELECT r.country, COUNT(*) AS store_count
+    FROM stores s JOIN regions r ON s.region_id = r.region_id
+    GROUP BY r.country
+- question: What is the average list price of products in the Footwear category?
+  sql: |
+    SELECT AVG(p.list_price) AS avg_list_price
+    FROM products p JOIN categories c ON p.category_id = c.category_id
+    WHERE c.category_name = 'Footwear'
+- question: Which 3 customers placed the most orders?
+  sql: |
+    SELECT c.customer_id, c.first_name, c.last_name, COUNT(o.order_id) AS order_count
+    FROM customers c JOIN orders o ON o.customer_id = c.customer_id
+    GROUP BY c.customer_id, c.first_name, c.last_name
+    ORDER BY order_count DESC
+    LIMIT 3
+- question: Total revenue from Gift Card payments' orders in 2023
+  sql: |
+    SELECT SUM(oi.quantity * oi.unit_price * (1 - oi.discount)) AS revenue
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.order_id
+    JOIN payments p ON p.order_id = o.order_id
+    WHERE p.payment_method = 'Gift Card' AND o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2023
+- question: List suppliers that have no products in the Grocery department
+  sql: |
+    SELECT s.supplier_name
+    FROM suppliers s
+    WHERE s.supplier_id NOT IN (
+        SELECT p.supplier_id FROM products p JOIN categories c ON p.category_id = c.category_id
+        WHERE c.department = 'Grocery'
+    )
+- question: What share of order lines had a discount of at least 10 percent?
+  sql: |
+    SELECT AVG(CASE WHEN discount >= 0.10 THEN 1.0 ELSE 0.0 END) AS share_discounted
+    FROM order_items
+- question: Number of returns per month in 2024 by return date
+  sql: |
+    SELECT DATE_TRUNC('month', return_date) AS month, COUNT(*) AS returns
+    FROM returns
+    WHERE EXTRACT(year FROM return_date) = 2024
+    GROUP BY 1 ORDER BY 1
+- question: For each store type, how many distinct customers bought through the Mobile App?
+  sql: |
+    SELECT s.store_type, COUNT(DISTINCT o.customer_id) AS customers
+    FROM orders o JOIN stores s ON o.store_id = s.store_id
+    WHERE o.channel = 'Mobile App'
+    GROUP BY s.store_type
+- question: Which products were returned more than 30 times?
+  sql: |
+    SELECT p.product_name, COUNT(*) AS return_count
+    FROM returns r
+    JOIN order_items oi ON r.order_item_id = oi.order_item_id
+    JOIN products p ON oi.product_id = p.product_id
+    GROUP BY p.product_name
+    HAVING COUNT(*) > 30
+- question: Rank departments by gross margin in 2024
+  sql: |
+    SELECT c.department,
+           SUM(oi.quantity * (oi.unit_price * (1 - oi.discount) - p.unit_cost)) AS gross_margin,
+           RANK() OVER (ORDER BY SUM(oi.quantity * (oi.unit_price * (1 - oi.discount) - p.unit_cost)) DESC) AS rnk
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.order_id
+    JOIN products p ON oi.product_id = p.product_id
+    JOIN categories c ON p.category_id = c.category_id
+    WHERE o.status <> 'Cancelled' AND EXTRACT(year FROM o.order_date) = 2024
+    GROUP BY c.department
+- question: What was the average number of days between order and return?
+  sql: |
+    SELECT AVG(r.return_date - o.order_date) AS avg_days
+    FROM returns r
+    JOIN order_items oi ON r.order_item_id = oi.order_item_id
+    JOIN orders o ON oi.order_id = o.order_id
+- question: Which loyalty members signed up in 2021?
+  sql: |
+    SELECT customer_id, first_name, last_name
+    FROM customers
+    WHERE loyalty_member AND EXTRACT(year FROM signup_date) = 2021

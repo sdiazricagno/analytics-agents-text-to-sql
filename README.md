@@ -189,6 +189,8 @@ tests/            guardrails, router, evaluation, workflow, golden-set integrity
 
 ## Tests and CI
 
+[![ci](https://github.com/sdiazricagno/analytics-agents-text-to-sql/actions/workflows/ci.yml/badge.svg)](https://github.com/sdiazricagno/analytics-agents-text-to-sql/actions/workflows/ci.yml)
+
 `pytest` covers every guardrail (including write attempts against the read-only connection), router coverage
 and deferral rules, join-path selection, follow-up merging, the self-correction loop and refusals with a
 scripted model, result matching and golden-set integrity.
